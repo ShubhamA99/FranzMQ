@@ -2,8 +2,10 @@ package main
 
 import (
 	"FranzMQ/constants"
+	"FranzMQ/initializers"
 	"FranzMQ/metrics"
 	"FranzMQ/producer"
+
 	"FranzMQ/topic"
 	"context"
 	"encoding/json"
@@ -119,6 +121,28 @@ func main() {
 	defer func() { _ = tp.Shutdown(context.Background()) }()
 
 	constants.Tracer = otel.Tracer("franzmq")
+
+	// Load configuration from  system.properties file.
+	config, err := initializers.LoadProperties("config/system.properties")
+	if err != nil {
+		fmt.Println("Error loading config:", err)
+		return
+	}
+
+	//fmt.Println(config["driverName"])//url
+	if config["driverName"] != "" {
+		conn, err := initializers.GetConnection(config["driverName"], config["url"])
+		if err != nil {
+			fmt.Println(err)
+		}
+		// Ensure the database connection is alive
+		pingErr := conn.Db.Ping()
+		if pingErr != nil {
+			err = pingErr
+			return
+		}
+	}
+
 	go producer.GlobalWriterThread(producer.GlobalLogWriterQueue)
 	go producer.GlobalWriterThread(producer.GlobalIndexWriterQueue)
 

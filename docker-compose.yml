@@ -16,7 +16,40 @@ services:
     networks:
       - franzmq_net
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317 # Ensure OpenTelemetry exporter points to Jaeger
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - MYSQL_DSN=root:password@tcp(mysql:3306)/franzmq_db?charset=utf8mb4&parseTime=True&loc=Local
+      - POSTGRES_DSN=postgres://postgres:password@postgres:5432/franzmq_db?sslmode=disable
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: franzmq_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3307:3306"
+    networks:
+      - franzmq_net
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: franzmq_db
+    ports:
+      - "5432:5432"
+    networks:
+      - franzmq_net
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   jaeger:
     image: jaegertracing/all-in-one:1.56
@@ -26,10 +59,14 @@ services:
       - COLLECTOR_OTLP_ENABLED=true
     ports:
       - "16686:16686" # Jaeger UI
-      - "4317:4317"   # OpenTelemetry gRPC
-      - "4318:4318"   # OpenTelemetry HTTP
+      - "4317:4317" # OpenTelemetry gRPC
+      - "4318:4318" # OpenTelemetry HTTP
     networks:
       - franzmq_net
 
 networks:
   franzmq_net:
+
+volumes:
+  mysql_data:
+  postgres_data:
